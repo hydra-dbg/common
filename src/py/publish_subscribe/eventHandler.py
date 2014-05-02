@@ -1,7 +1,7 @@
 import json
 import threading
 import socket
-from multiprocessing import Lock
+from threading import Lock
 import syslog, traceback
 from message_ensambler import ensamble_messages
 
@@ -11,7 +11,6 @@ class EventHandler(threading.Thread):
         threading.Thread.__init__(self)
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.connect(("localhost", 5555))
-        self.max_buf_length = 1024 * 1024
         self.log_to_console = False
         self.lock = Lock()
         self.callbacks_by_topic = {'':[]}
@@ -21,29 +20,37 @@ class EventHandler(threading.Thread):
         
     def subscribe(self, topic, callback):
         self.lock.acquire()
-        if self.callbacks_by_topic.has_key(topic):
-            self.callbacks_by_topic[topic].append(callback)
-        else:
-            self.callbacks_by_topic[topic] = []
-            self.callbacks_by_topic[topic].append(callback)
-        self.lock.release()
+        try:
+           if self.callbacks_by_topic.has_key(topic):
+               self.callbacks_by_topic[topic].append(callback)
+           else:
+               self.callbacks_by_topic[topic] = []
+               self.callbacks_by_topic[topic].append(callback)
+
+        finally:
+           self.lock.release()
 
         msg = json.dumps({'type': 'subscribe', 'topic': topic})
         syslog.syslog(syslog.LOG_DEBUG, "Subscribing to the topic '%s'. Sending: '%s'." % (topic, msg))
         self.socket.sendall(msg)
+        syslog.syslog(syslog.LOG_DEBUG, "Message sent.")
     
     def publish(self, topic, data):
         if(not topic):
-            raise "The topic must not be empty"
+            raise Exception("The topic must not be empty")
 
         msg = json.dumps({'type': 'publish', 'topic': topic, 'data': data})
         syslog.syslog(syslog.LOG_DEBUG, "Publising an event of topic '%s'. Sending: '%s'." % (topic, msg))
         self.socket.sendall(msg)
+        syslog.syslog(syslog.LOG_DEBUG, "Message sent.")
         
     def _read_chunk(self):
+        syslog.syslog(syslog.LOG_DEBUG, "Waiting for the next chunk of data")
         chunk = self.socket.recv(1024)
         if not chunk:
            syslog.syslog(syslog.LOG_DEBUG, "Endpoint close the connection.")
+        else:
+           syslog.syslog(syslog.LOG_DEBUG, "Chunk received (%i bytes): '%s'." % (len(chunk), chunk))
       
         return chunk
 
