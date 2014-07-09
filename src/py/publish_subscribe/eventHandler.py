@@ -81,7 +81,7 @@ class EventHandler(threading.Thread):
         
         del self.subscriptions_by_id[subscription_id]
 
-    def subscribe_for_once_call(self, topic, callback):
+    def subscribe_for_once_call(self, topic, callback, **kargs):
        def wrapper(*args, **kargs):
           callback.subscription = wrapper.subscription
           try:
@@ -89,7 +89,7 @@ class EventHandler(threading.Thread):
           finally:
              self.unsubscribe(wrapper.subscription['id'])
 
-       return self.subscribe(topic, wrapper)
+       return self.subscribe(topic, wrapper, **kargs)
 
     def run(self):
         try:
