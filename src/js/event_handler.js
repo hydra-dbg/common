@@ -70,7 +70,7 @@ define(function () {
          throw "The topic must not be empty";
       }
 
-      this.socket.write(JSON.stringify({type: 'publish', topic: topic, data: data}));
+      this.socket.write(JSON.stringify({type: 'publish', topic: topic, data: JSON.stringify(data)}));
    };
 
    EventHandler.prototype.subscribe = function (topic, callback) {
@@ -231,7 +231,7 @@ define(function () {
          }
          for(var i = 0; i < callbacks.length; i++) {
             try {
-               callbacks[i](event.data);
+               callbacks[i](JSON.parse(event.data));
             }
             catch (e) {
                // TODO
