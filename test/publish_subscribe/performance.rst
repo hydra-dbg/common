@@ -47,7 +47,7 @@ de copia de mensajes grandes. Este experimento marca un minimo.
 ::
 
    >>> begin_experiment_time = time.time()
-   >>> for i in reversed(range(1000, -1, -1)):
+   >>> for i in (range(1000, -1, -1)):
    ...    agent1.publish('foo', {'n':i, 'd':''})
    >>> last_message_found.acquire(); elapsed_time = time.time() - begin_experiment_time
    >>> elapsed_time
@@ -60,7 +60,7 @@ a
 
    >>> payload = "a" * (7000 * 9)
    >>> begin_experiment_time = time.time()
-   >>> for i in reversed(range(1000, -1, -1)):
+   >>> for i in (range(1000, -1, -1)):
    ...    agent1.publish('foo', {'n':i, 'd': payload})
    >>> last_message_found.acquire(); elapsed_time = time.time() - begin_experiment_time
    >>> elapsed_time
@@ -72,13 +72,63 @@ a
 
    >>> payload = "}a{}{d}{{}" * (700 * 9)
    >>> begin_experiment_time = time.time()
-   >>> for i in reversed(range(1000, -1, -1)):
+   >>> for i in (range(1000, -1, -1)):
    ...    agent1.publish('foo', {'n':i, 'd': payload})
    >>> last_message_found.acquire(); elapsed_time = time.time() - begin_experiment_time
    >>> elapsed_time
    0
 
 a
+
+::
+
+   js> var agent2 = new event_handler.EventHandler();
+   js> agent2.init();            // this method is NOT blocked
+
+   >>> time.sleep(3)    # workaround!!!
+   >>> begin_experiment_time = time.time()
+   
+   js> for (var i = 1000; i >= 0; --i) {
+   ...    agent2.publish('foo', {'n':i, 'd':''});
+   ... }
+
+   >>> last_message_found.acquire(); elapsed_time = time.time() - begin_experiment_time
+   >>> elapsed_time
+   0
+
+a
+
+::
+
+   js> var bar_handler = function(event) {
+   ...   if (event['n'] === 0) {
+   ...       agent2.publish('foo', {'n':0, 'd':''});
+   ...   }
+   ... };
+
+   js> agent2.subscribe('bar', bar_handler);
+   
+
+   >>> payload = "}a{}{d}{{}" * (700 * 9)
+   >>> begin_experiment_time = time.time()
+   >>> for i in (range(1000, -1, -1)):
+   ...    agent1.publish('bar', {'n':i, 'd': payload})
+   >>> last_message_found.acquire(); elapsed_time = time.time() - begin_experiment_time
+   >>> elapsed_time
+   0
+
+
+a
+
+::
+
+   >>> payload = ""
+   >>> begin_experiment_time = time.time()
+   >>> for i in (range(1000, -1, -1)):
+   ...    agent1.publish('bar', {'n':i, 'd': payload})
+   >>> last_message_found.acquire(); elapsed_time = time.time() - begin_experiment_time
+   >>> elapsed_time
+   0
 
 ::
 
