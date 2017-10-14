@@ -34,7 +34,7 @@ To run the server,
    >>> # just an auxiliary function for testing purpose only to know if the process 
    >>> # is running
    >>> def is_running():
-   ...   time.sleep(0.1)
+   ...   time.sleep(0.01)
    ...   out = check_output(["python", "py/publish_subscribe/notifier.py", "status"])
    ...   return "running" in out
 
@@ -75,7 +75,10 @@ The API consists of two methods:
 Before any action, the entity must initialize the lib
 
 ::
-   
+ 
+   >>> import sys
+   >>> sys.path.append("./py/")
+
    >>> import publish_subscribe.eventHandler 
    >>> pubsub = publish_subscribe.eventHandler.EventHandler()
 
@@ -175,7 +178,7 @@ Our implementation support only filtering by topic.
    >>> pubsub.subscribe('A', add_sync)    # subcribed to the A topic
    
    >>> pubsub.publish('A', "A")
-   >>> time.sleep(2) # we wait some time so the event comes back
+   >>> time.sleep(0.2) # we wait some time so the event comes back
    >>> shared_list.count("A")
    1
 
@@ -187,12 +190,12 @@ The topic can be seen as a hierarchy of topics.
    >>> pubsub.subscribe('B.C', add_sync)  # subcribed to B.C only
 
    >>> pubsub.publish('B.C', "B, sub C")
-   >>> time.sleep(2) 
+   >>> pubsub.publish('B', "just B")
+   >>> time.sleep(0.2)
+
    >>> shared_list.count("B, sub C")   # 'B' and 'B.C' called 
    2
 
-   >>> pubsub.publish('B', "just B")
-   >>> time.sleep(2) 
    >>> shared_list.count("just B")  # this will be received by only one callbacks
    1
 
@@ -204,7 +207,7 @@ The matching is hierarchal, from the left to the right.
    >>> pubsub.subscribe('blue.Z', add_sync)
 
    >>> pubsub.publish('green.Z', 'green') # don't care th *.Z, we start the matching from the left
-   >>> time.sleep(2)
+   >>> time.sleep(0.2)
    >>> shared_list.count('green') 
    0
 
@@ -217,7 +220,7 @@ It's not possible to publish an event with an *empty* topic.
 
    >>> pubsub.publish('X', "some X event")    # these events will be dropped
    >>> pubsub.publish('W.X.Y.Z', "a very specific event")
-   >>> time.sleep(2) 
+   >>> time.sleep(0.2) 
    >>> shared_list.count("some X event"), shared_list.count("a very specific event")
    (0, 0)
    
@@ -225,7 +228,7 @@ It's not possible to publish an event with an *empty* topic.
 
    >>> pubsub.publish('X', "some X event")
    >>> pubsub.publish('W.X.Y.Z', "a very specific event")
-   >>> time.sleep(2) 
+   >>> time.sleep(0.2) 
    >>> shared_list.count("some X event"), shared_list.count("a very specific event")
    (1, 1)
 
@@ -311,12 +314,12 @@ Each subscription has a identifier that you can use to cancel it latter.
    >>> subscription_id = pubsub.subscribe('to-be-cancel', f, return_subscription_id=True)
    >>>
    >>> pubsub.publish('to-be-cancel', 'A')
-   >>> time.sleep(2)
+   >>> time.sleep(0.2)
 
    >>> pubsub.unsubscribe(subscription_id)
    >>> pubsub.publish('to-be-cancel', 'B') #this event should be discarted.
+   >>> time.sleep(0.2)
 
-   >>> time.sleep(2)
    >>> receive
    u'A'
 
@@ -341,7 +344,7 @@ The *subscribe_for_once_call* is a shortcut for that:
    >>> pubsub.publish('only-one', 'A')
    >>> pubsub.publish('only-one', 'B')
 
-   >>> time.sleep(2)
+   >>> time.sleep(0.2)
    >>> received
    u'A'
 
@@ -353,7 +356,7 @@ Sometimes you need a synchronized way to wait a particular event. (don't abuse t
 
 ::
    >>> def emit_event_after_a_while():
-   ...   time.sleep(1)
+   ...   time.sleep(0.1)
    ...   pubsub.publish('sync-event', 'SYNC')
 
    >>> emit_event_in_background = threading.Thread(None, emit_event_after_a_while)
@@ -400,7 +403,7 @@ we don't sent any message, so there is no way to duplicate or drop any message).
 
    >>> is_running()
    False
-   >>> os.system("( sleep 5 && python py/publish_subscribe/notifier.py start ) &")
+   >>> os.system("( sleep 2 && python py/publish_subscribe/notifier.py start ) &")
    0
    >>> is_running()  # yes, it should not be running right now.
    False
@@ -439,7 +442,7 @@ First we initialize the object
 
    ::
 
-      >>> time.sleep(3)    # workaround!!!
+      >>> time.sleep(1.5)    # workaround!!!
       >>> is_running()
       True
 
