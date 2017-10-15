@@ -1,18 +1,17 @@
-import os, time, sys
+import os, time
 from subprocess import check_output
 from threading import Lock
 
-sys.path.append("./py")
 import publish_subscribe.eventHandler 
 
 def is_running():
     time.sleep(0.01)
-    out = check_output(["python", "py/publish_subscribe/notifier.py", "status"])
+    out = check_output(["python", "publish_subscribe/notifier.py", "status"])
     return "running" in out
 
 
 if __name__ == '__main__':
-    os.system("python py/publish_subscribe/notifier.py start")
+    os.system("python publish_subscribe/notifier.py start")
     assert is_running()
     
     try:
@@ -36,5 +35,5 @@ if __name__ == '__main__':
         finally:
             agent1.close()
     finally:
-        os.system("python py/publish_subscribe/notifier.py stop")
+        os.system("python publish_subscribe/notifier.py stop")
 

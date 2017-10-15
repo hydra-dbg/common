@@ -13,8 +13,8 @@ def load_global_config():
    script_home = os.path.abspath(os.path.dirname(__file__))
    parent = os.path.pardir
 
-   config_file = os.path.join(script_home, parent, parent, "config", "global.cfg")
-   user_file = os.path.join(script_home, parent, parent, "config", "user.cfg")
+   config_file = os.path.join(script_home, parent, "config", "global.cfg")
+   user_file = os.path.join(script_home, parent, "config", "user.cfg")
 
    __CONFIG = FrozenConfigParser(
             optionxform = str, 
