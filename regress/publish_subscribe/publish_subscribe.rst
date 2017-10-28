@@ -42,6 +42,10 @@ To run the server,
    ...     is_running = "running" in check_output(["python", "publish_subscribe/notifier.py", "status"])
    ...   
    ...   return is_running == to_be_running
+   
+   >>> os.system("python publish_subscribe/notifier.py stop")  # doctest: +PASS
+   >>> wait_for(to_be_running=False)
+   True
 
    >>> os.system("python publish_subscribe/notifier.py start")
    0

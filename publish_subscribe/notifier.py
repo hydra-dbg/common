@@ -283,8 +283,8 @@ def main():
    script_home = os.path.abspath(os.path.dirname(__file__))
    parent = os.path.pardir
 
-   sys.path.append(os.path.abspath(os.path.join(script_home, "../")))
-   import globalconfig
+   sys.path.append(os.path.abspath(os.path.join(script_home, parent)))
+   import cfg.globalconfig as globalconfig
 
    globalconfig.load_global_config()
    config = globalconfig.get_global_config()

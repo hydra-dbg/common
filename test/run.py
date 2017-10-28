@@ -8,11 +8,10 @@ def doctests(source_dir, whitelist):
                      and os.path.splitext(fname)[1] == ".rst"]
 
 
-def run_doctests(sources, working_directory, flags):
+def run_doctests(sources, flags):
    for source in sources:
       print "Run tests in %s" % source
-      cmd = ("cd %s; python %s %s %s" % (
-         working_directory, 
+      cmd = ("python %s %s %s" % (
          DOCTEST_PATH,
          flags,
          source))
@@ -47,5 +46,5 @@ if __name__ == '__main__':
    whitelist.sort()
 
    sources = doctests(source_dir, whitelist)
-   run_doctests(sources, working_directory, flags)
+   run_doctests(sources, flags)
 
