@@ -30,17 +30,22 @@ To run the server,
 
    >>> import os, time
    >>> from subprocess import check_output
+   >>> import sys, os; sys.path.append(os.getcwd())
 
-   >>> # just an auxiliary function for testing purpose only to know if the process 
-   >>> # is running
-   >>> def is_running():
-   ...   time.sleep(0.01)
-   ...   out = check_output(["python", "publish_subscribe/notifier.py", "status"])
-   ...   return "running" in out
+   >>> # just an auxiliary function for testing purpose only to wait for a process 
+   >>> # to be running or not
+   >>> def wait_for(to_be_running):
+   ...   time.sleep(0.5); t = 0.5
+   ...   is_running = not to_be_running
+   ...   while (is_running != to_be_running) and t < 10:
+   ...     time.sleep(0.5); t += 0.5
+   ...     is_running = "running" in check_output(["python", "publish_subscribe/notifier.py", "status"])
+   ...   
+   ...   return is_running == to_be_running
 
    >>> os.system("python publish_subscribe/notifier.py start")
    0
-   >>> is_running()
+   >>> wait_for(to_be_running=True)
    True
 
 The *publish_subscribe* script will spawn the server and will wait until it is ready.
@@ -51,8 +56,8 @@ To shutdown the system (only the server, this doesn't affect the clients),
 
    >>> os.system("python publish_subscribe/notifier.py stop")
    0
-   >>> is_running()
-   False
+   >>> wait_for(to_be_running=False)
+   True
 
 
 The server should be able to use the same port again.
@@ -61,7 +66,7 @@ The server should be able to use the same port again.
 
    >>> os.system("python publish_subscribe/notifier.py start")
    0
-   >>> is_running()
+   >>> wait_for(to_be_running=True)
    True
    >>> # we let the server running for the rest of this doctest
 
@@ -374,8 +379,8 @@ Don't forget to close the connection and stop the server.
    >>>
    >>> os.system("python publish_subscribe/notifier.py stop")
    0
-   >>> is_running()
-   False
+   >>> wait_for(to_be_running=False)
+   True
 
 Reconnections and duplicated messages
 -------------------------------------
@@ -398,15 +403,13 @@ we don't sent any message, so there is no way to duplicate or drop any message).
 
 ::
 
-   >>> is_running()
-   False
+   >>> wait_for(to_be_running=False)
+   True
    >>> os.system("( sleep 2 && python publish_subscribe/notifier.py start ) &")
    0
-   >>> is_running()  # yes, it should not be running right now.
-   False
 
    >>> pubsub = publish_subscribe.eventHandler.EventHandler() # we block until the server is ready (or timeout)
-   >>> is_running()  # now it should be running
+   >>> wait_for(to_be_running=True)
    True
    
    >>> pubsub.close()
@@ -423,8 +426,6 @@ First we initialize the object
 
    >>> os.system("( sleep 1 && python publish_subscribe/notifier.py start ) &")
    0
-   >>> is_running()  # yes, it should not be running right now.
-   False
 
 ::
 
@@ -439,8 +440,7 @@ First we initialize the object
 
    ::
 
-      >>> time.sleep(1.5)    # workaround!!!
-      >>> is_running()
+      >>> wait_for(to_be_running=True)
       True
 
 -------------------------------------------------------------------------------
@@ -548,5 +548,5 @@ Finally, we close and release any resource
    
    >>> os.system("python publish_subscribe/notifier.py stop")
    0
-   >>> is_running()
-   False
+   >>> wait_for(to_be_running=False)
+   True
