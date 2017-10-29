@@ -1,0 +1,13 @@
+# This is just an example
+# Copy to 'user.cfg' to override the configuration of 'global.cfg'
+[ui]
+node-webkit-executable-path = /home/YOU/node-webkit-directory/nw
+udev-lib-path = /home/YOU/udev-lib-directory/
+
+[gdb]
+use-gdb-system = False
+gdb-executable-path = /home/YOU/gdb/gdb-7.8/gdb/gdb
+gdb-data-directory = /home/YOU/gdb/gdb-7.8/gdb/data-directory
+
+[gdbspawner]
+log_level = LOG_DEBUG
