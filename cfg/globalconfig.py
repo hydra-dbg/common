@@ -1,4 +1,4 @@
-from frozenconfigparser import FrozenConfigParser
+from .frozenconfigparser import FrozenConfigParser
 import sys, os
 
 __CONFIG = None

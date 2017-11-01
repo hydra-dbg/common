@@ -1,7 +1,11 @@
-import ConfigParser
 import collections
-import StringIO
 import contextlib
+from io import StringIO
+
+try:
+    import ConfigParser
+except ImportError:
+    import configparser as ConfigParser
 
 class FrozenConfigParser(object):
    def __init__(self, 
@@ -71,6 +75,6 @@ class FrozenConfigParser(object):
       return self._dict_type(self._config_parser.defaults())
    
    def __repr__(self):
-      with contextlib.closing(StringIO.StringIO()) as buf:
+      with contextlib.closing(StringIO()) as buf:
          self._config_parser.write(buf)
          return buf.getvalue()
