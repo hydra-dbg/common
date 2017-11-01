@@ -8,13 +8,13 @@ from threading import Lock
 
 
 def start_notifier(path):
-   notifier_path = os.path.join(path, "notifier.py")
+   notifier_path = os.path.join(path, "notifier").replace(os.sep, '.')
    def is_running_notifier(): 
-      out = check_output(["python", notifier_path, "status"]) 
-      return "running" in out
+      out = check_output(["python", "-m", notifier_path, "status"]) 
+      return b"running" in out
    
    if not is_running_notifier():
-      check_call(["python", notifier_path, "start"]) 
+      check_call(["python", "-m", notifier_path, "start"]) 
 
    t = 10
    while not is_running_notifier() and t > 0:
@@ -25,8 +25,8 @@ def start_notifier(path):
       raise Exception("The notifier is not up and i cannot start it.")
 
 def stop_notifier(path):   
-   notifier_path = os.path.join(path, "notifier.py")
-   check_call(["python", notifier_path, "stop"]) 
+   notifier_path = os.path.join(path, "notifier").replace(os.sep, '.')
+   check_call(["python", "-m", notifier_path, "stop"]) 
 
 def request(gdb, command, arguments=tuple(), return_none=False):
    cookie = int(random.getrandbits(30))
