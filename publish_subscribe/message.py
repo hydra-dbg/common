@@ -4,10 +4,13 @@ try:
 except ImportError:
     import json
 
+from .esc import to_bytes, to_text
+
 ByteMax  =  (2**8)-1
 ShortMax = (2**16)-1
 
 def pack_introduce_myself_msg(name):
+    assert isinstance(name, bytes)
     name_length = len(name)
     
     if not (0 <= name_length <= ByteMax):
@@ -22,13 +25,15 @@ def unpack_introduce_myself_msg(raw):
 
 
 def pack_publish_msg(topic, obj, dont_pack_object):
+    assert isinstance(topic, bytes)
     topic_length = len(topic)
 
     if dont_pack_object:
         obj_raw = obj
     else:
-        obj_raw = json.dumps(obj)
+        obj_raw = to_bytes(json.dumps(obj))
 
+    assert isinstance(obj_raw, bytes)
     obj_lenth = len(obj_raw)
 
     if not (0 <= topic_length <= ShortMax) or not (0 <= obj_lenth <= ShortMax):
@@ -46,11 +51,12 @@ def unpack_publish_msg(raw, dont_unpack_object):
         return topic, obj_raw
 
     else:
-        obj = json.loads(obj_raw)
+        obj = json.loads(to_text(obj_raw))
         return topic, obj
 
 
 def pack_subscribe_unsubscribe_msg(topic):
+    assert isinstance(topic, bytes)
     topic_length = len(topic)
 
     if not (0 <= topic_length <= ShortMax):
@@ -84,6 +90,7 @@ def pack_message(message_type, *args, **kargs):
     else:
         raise Exception()
 
+    assert isinstance(message_body, bytes)
     message_body_len = len(message_body)
     msg = struct.pack(">BH", op, message_body_len) + message_body
 
@@ -107,6 +114,7 @@ def unpack_message_header(raw):
     return message_type, message_body_len
 
 def unpack_message_body(message_type, message_body, **kargs):
+    assert isinstance(message_body, bytes)
     if message_type == 'publish':
         return unpack_publish_msg(message_body, **kargs)
     

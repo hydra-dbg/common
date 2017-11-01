@@ -133,7 +133,7 @@ class Connection(object):
           chunks.append(chunk)
           to_receive -= len(chunk)
       
-      return "".join(chunks)
+      return b"".join(chunks)
 
 
    def __del__(self):

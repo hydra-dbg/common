@@ -9,18 +9,27 @@ def esc(*args):
    escaped = []
 
    if sys.version_info.major > 2:
-       string_t = bytes
-       text_t   = str
+       for arg in args:
+          if isinstance(arg, bytes):
+             escaped.append(str(arg, 'utf-8').encode('unicode_escape'))
+          elif isinstance(arg, str):
+             escaped.append(arg.encode('unicode_escape'))
+          else:
+             escaped.append(arg)
    else:
-       string_t = str
-       text_t   = unicode
-
-   for arg in args:
-      if isinstance(arg, string_t):
-         escaped.append(arg.encode('string_escape'))
-      elif isinstance(arg, text_t):
-         escaped.append(arg.encode('unicode_escape'))
-      else:
-         escaped.append(arg)
+       for arg in args:
+          if isinstance(arg, str):
+             escaped.append(arg.encode('string_escape'))
+          elif isinstance(arg, unicode):
+             escaped.append(arg.encode('unicode_escape'))
+          else:
+             escaped.append(arg)
 
    return tuple(escaped)
+
+def to_bytes(s):
+   return s if isinstance(s, bytes) else bytes(s, 'utf-8')
+
+def to_text(s):
+   text_t = str if sys.version_info.major > 2 else unicode
+   return s if isinstance(s, text_t) else text_t(s, 'utf-8')

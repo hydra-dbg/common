@@ -6,11 +6,12 @@ import syslog, traceback
 from .connection import Connection
 from .message import pack_message, unpack_message_body
 from .topic import build_topic_chain, fail_if_topic_isnt_valid
-from .esc import esc
+from .esc import esc, to_bytes
 import random
 
 class Publisher(object):
     def __init__(self, name="(publisher-only)", address=("localhost", 5555)):
+        name = to_bytes(name)
         self.name = name
 
         try:
@@ -24,6 +25,7 @@ class Publisher(object):
         self._safe_topics = set()
         
     def publish(self, topic, data):
+        topic = to_bytes(topic)
         if topic not in self._safe_topics:
             fail_if_topic_isnt_valid(topic, allow_empty=False)
             self._safe_topics.add(topic)
@@ -68,6 +70,7 @@ class EventHandler(threading.Thread, Publisher):
         return "Endpoint (%s)" % self.name
         
     def subscribe(self, topic, callback, return_subscription_id=False, send_and_wait_echo=True):
+        topic = to_bytes(topic)
         if topic not in self._safe_topics:
             fail_if_topic_isnt_valid(topic, allow_empty=True)
             if topic: # don't add an empty topic: whitelisting this kind of topics will defeat the publish's check. See this same check in the publish method.
@@ -76,7 +79,7 @@ class EventHandler(threading.Thread, Publisher):
         result = None
         self.lock.acquire()
         try:
-           if self.callbacks_by_topic.has_key(topic):
+           if topic in self.callbacks_by_topic:
                self.callbacks_by_topic[topic].append((callback, {'id': self.next_valid_subscription_id}))
            else:
                #self._log(syslog.LOG_DEBUG, "Sending subscription to the topic '%s'." % esc(topic))
@@ -119,6 +122,7 @@ class EventHandler(threading.Thread, Publisher):
            self.lock.release()
 
     def wait(self, topic):
+        topic = to_bytes(topic)
         flag = Lock()
         env = {}
         
@@ -157,6 +161,7 @@ class EventHandler(threading.Thread, Publisher):
 
 
     def subscribe_for_once_call(self, topic, callback, **kargs):
+       topic = to_bytes(topic)
        subscription = {}
        temp_lock = Lock()
 
@@ -208,6 +213,7 @@ class EventHandler(threading.Thread, Publisher):
            self.connection.close()
 
     def dispatch(self, topic, obj):
+        assert isinstance(topic, bytes)
         topic_chain = build_topic_chain(topic)
 
         callbacks_collected = []
