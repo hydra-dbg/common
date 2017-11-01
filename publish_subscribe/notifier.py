@@ -281,7 +281,7 @@ class Notifier(Daemon):
       
 
 def main():
-   import sys, os, ConfigParser
+   import sys, os
    script_home = os.path.abspath(os.path.dirname(__file__))
    parent = os.path.pardir
 

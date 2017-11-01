@@ -76,9 +76,9 @@ class Daemon(object):
       sys.stderr.flush()
 
       new = [
-            file(self.stdin, 'r').fileno() if isinstance(self.stdin, basestring) else self.stdin.fileno(),
-            file(self.stdout, 'a+').fileno() if isinstance(self.stdout, basestring) else self.stdout.fileno(),
-            file(self.stderr, 'a+', 0).fileno() if isinstance(self.stderr, basestring) else self.stderr.fileno(),
+            open(self.stdin, 'r').fileno() if isinstance(self.stdin, basestring) else self.stdin.fileno(),
+            open(self.stdout, 'a+').fileno() if isinstance(self.stdout, basestring) else self.stdout.fileno(),
+            open(self.stderr, 'a+', 0).fileno() if isinstance(self.stderr, basestring) else self.stderr.fileno(),
             ]
 
       old = [
@@ -138,7 +138,7 @@ class Daemon(object):
 
    def get_pid_from_pidfile(self):
       try:
-         pf = file(self.pidfile,'r')
+         pf = open(self.pidfile,'r')
          pid = int(pf.read().strip())
          pf.close()
       except IOError:
