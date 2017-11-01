@@ -1,4 +1,4 @@
-from esc import esc
+from .esc import esc
 
 def build_topic_chain(topic):
    ''' We build the topic chain:

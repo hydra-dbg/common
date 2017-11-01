@@ -5,8 +5,8 @@ import json
 import time
 import traceback
 
-from esc import esc
-from message import unpack_message_header
+from .esc import esc
+from .message import unpack_message_header
 
 class ConnectionClosed(Exception):
     def __init__(self, msg=""):

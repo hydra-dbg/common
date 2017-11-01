@@ -3,10 +3,10 @@ import threading
 import socket
 from threading import Lock
 import syslog, traceback
-from connection import Connection
-from message import pack_message, unpack_message_body
-from topic import build_topic_chain, fail_if_topic_isnt_valid
-from esc import esc
+from .connection import Connection
+from .message import pack_message, unpack_message_body
+from .topic import build_topic_chain, fail_if_topic_isnt_valid
+from .esc import esc
 import random
 
 class Publisher(object):

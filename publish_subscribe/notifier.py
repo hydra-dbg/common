@@ -1,10 +1,12 @@
 import socket, threading, json
-import daemon, syslog, traceback
-from connection import Connection
-from topic import build_topic_chain, fail_if_topic_isnt_valid
+import syslog, traceback
 
-from esc import esc
-from message import unpack_message_body, pack_message
+from .daemon import Daemon
+from .connection import Connection
+from .topic import build_topic_chain, fail_if_topic_isnt_valid
+
+from .esc import esc
+from .message import unpack_message_body, pack_message
 
 #TODO add keep alive
 class _Endpoint(threading.Thread):
@@ -84,9 +86,9 @@ class _Endpoint(threading.Thread):
 
 # TODO endpoints_by_topic (and endpoint_subscription_lock) as a single object
 
-class Notifier(daemon.Daemon):
+class Notifier(Daemon):
    def __init__(self, address, pidfile, name, foreground, listen_queue_len, show_stats, stats_file):
-      daemon.Daemon.__init__(self,
+      Daemon.__init__(self,
             pidfile=pidfile, 
             name=name,
             keep_open_fileno=[0, 1, 2],
