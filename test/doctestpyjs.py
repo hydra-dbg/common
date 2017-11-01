@@ -1,4 +1,4 @@
-import doctest, re, sys, subprocess, time, socket, traceback
+import doctest, re, sys, subprocess, time, socket, traceback, pprint
 GLOBAL_FLAGS = 0
 PASS = doctest.register_optionflag("PASS")
 
@@ -209,6 +209,14 @@ except ImportError:
     import builtins
 
 original_compile_func = builtins.compile
+literal_string_re = re.compile(r"(\W|^)[uUbB]([rR]?[\'\"])", re.UNICODE)
+
+def display(s):
+    global literal_string_re
+    if s is not None:
+        _repr = pprint.pformat(s)
+        _repr = re.sub(literal_string_re, r'\1\2', _repr)
+        print(_repr)
 
 def compile(source, filename, *args, **kargs):
    '''Take the source and compile it into a runnable python code.
@@ -224,11 +232,12 @@ def compile(source, filename, *args, **kargs):
 
    _, source_type = mixed_parser.type_of_source[source].pop()
 
-   import sys, pprint   # hook the displayhook to use pprint instead of repr
    sys.stderr.write(".")
 
    sys.stderr.flush()
-   sys.displayhook = lambda x: pprint.pprint(x) if x is not None else None
+   
+   # hook the displayhook to use pprint instead of repr
+   sys.displayhook = display
 
    if source_type == "js":
       js_code = source
@@ -258,7 +267,6 @@ def testfile(*args, **kargs):
    kargs['optionflags'] = optionflags
    kargs['parser'] = mixed_parser
 
-   import sys
    try:
       return original_testfile_func(*args, **kargs)
    finally:
