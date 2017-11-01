@@ -1,3 +1,4 @@
+import sys
 
 def esc(*args):
    '''Return a tuple with its string escaped:
@@ -6,10 +7,18 @@ def esc(*args):
         - else, don't do anything.
    '''
    escaped = []
+
+   if sys.version_info.major > 2:
+       string_t = bytes
+       text_t   = str
+   else:
+       string_t = str
+       text_t   = unicode
+
    for arg in args:
-      if isinstance(arg, str):
+      if isinstance(arg, string_t):
          escaped.append(arg.encode('string_escape'))
-      elif isinstance(arg, unicode):
+      elif isinstance(arg, text_t):
          escaped.append(arg.encode('unicode_escape'))
       else:
          escaped.append(arg)
