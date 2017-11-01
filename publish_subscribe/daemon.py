@@ -105,7 +105,7 @@ class Daemon(object):
       for fd in to_close:
          try:
             os.close(fd)
-         except OSError, exc:
+         except OSError as exc:
             if exc.errno != errno.EBADF:
                raise  # File descriptor was open
  
@@ -172,7 +172,7 @@ class Daemon(object):
             time.sleep(0.1)
             t -= 0.1
          os.kill(pid, SIGKILL)
-      except OSError, err:
+      except OSError as err:
          err = str(err)
          if err.find("No such process") > 0:
             if os.path.exists(self.pidfile):
@@ -185,9 +185,9 @@ class Daemon(object):
    def status(self):
       pid = self.get_pid_from_pidfile()
       if pid:
-         print "%s start/running, process %i" % (self.name, pid)
+         print("%s start/running, process %i" % (self.name, pid))
       else:
-         print "%s stop/waiting" % self.name
+         print("%s stop/waiting" % self.name)
 
 
    def restart(self):
@@ -196,7 +196,7 @@ class Daemon(object):
 
    def do_from_arg(self, arg):
       if arg not in ("start", "stop", "status", "restart"):
-         print "usage: %s start|stop|status|restart" % sys.argv[0]
+         print("usage: %s start|stop|status|restart" % sys.argv[0])
          sys.exit(2)
 
       getattr(self, arg)()
