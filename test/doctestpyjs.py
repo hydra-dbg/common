@@ -188,8 +188,7 @@ class DocTestMixedParser(doctest.DocTestParser):
       # its example is executed.
       all_examples.sort(key=lambda this: this.lineno)
       for source in self.type_of_source.keys():
-         self.type_of_source[source].sort(key=lambda this: this[0])
-         self.type_of_source[source].reverse()
+         self.type_of_source[source].sort(key=lambda this: this[0], reverse=True)
 
       return all_examples
 
