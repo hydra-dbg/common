@@ -1,4 +1,5 @@
-import os 
+import os
+import contextlib
 import time 
 from subprocess import check_output, check_call
 import publish_subscribe.eventHandler
@@ -109,4 +110,27 @@ def collect(func_collector):
    _collect.get_next = _get_next
 
    return _collect
+
+def poll_process(proc, tries, poll_time):
+   ''' Poll for the finish of the process proc. If proc is None or it has
+       not finished yet, keep polling at most 'tries' tries, waiting for
+       'poll_time' seconds between each try.
+
+       Return None. It is the caller responsibility to check if proc
+       finished or not.
+       '''
+   while proc and proc.poll() is None and tries > 0:
+      time.sleep(poll_time)
+      tries -= 1
+
+@contextlib.contextmanager
+def noexception():
+    ''' Silent any possible exception. This is useful only in 
+        situations that you cannot do anything like when you are
+        finalizing a process and you want to close everything.
+        '''
+   try:
+      yield
+   except:
+      pass
 
