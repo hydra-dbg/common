@@ -75,16 +75,25 @@ def collect(func_collector):
       After the first call, subsequent calls will block the thread.
       
       The wrap will also contain a method called 'get_next' that will block if
-      no func_collector was done previuosly.
+      no func_collector was done previously.
 
-      After calling (successfuly) func_collector, get_next is allowed to be called.
+      After calling (successfully) func_collector, get_next is allowed to be called.
       After calling get_next, func_collector is allowed again.
 
       This interaction between func_collector and get_next allows to share results
       from one thread (calling func_collector) to another thread (calling get_next).
       The results are shared one at time.
+
+      An additional method is added to the wrap named 'destroy'. When it is called,
+      it will force to func_collector to drop any data. That means that a subsequent
+      call to get_next will block (so don't do it!).
+
+      Use this destroy method to make sure that all the resources are freed and that
+      a call to func_collector will not block.
+
+      This wrapper was mainly designed for testing purposes.
    '''
-   ctx = {}
+   ctx = {'drop': False}
    can_read_flag = Lock()
    can_read_flag.acquire()
 
@@ -94,7 +103,7 @@ def collect(func_collector):
       can_write_flag.acquire()
 
       c = func_collector(*args, **kargs)
-      if c == None:
+      if c == None or ctx['drop']:
          can_write_flag.release()
          return # discard
 
@@ -107,7 +116,34 @@ def collect(func_collector):
       can_write_flag.release()
       return c
 
+   def _destroy():
+      can_write_acquired = can_write_flag.acquire(False)
+      while not can_write_acquired:
+          # we couldn't acquire the write flag, this can means that:
+          #  - or the _collect acquired it and eventually it will release
+          #    it because the data may be discarded 
+          #  - or the _collect acquired it and eventually it will release
+          #    the can-read flag: we cannot relay in _get_next to release
+          #    the write flag so we must to take care
+          time.sleep(0.01)
+          can_read_acquired = can_read_flag.acquire(False)
+          if can_read_acquired:
+              # drop the data of _get_next and release the write flag
+              # this will simulate a _get_next call dropping any 
+              # pending data
+              can_write_flag.release()
+          
+          can_write_acquired = can_write_flag.acquire(False)
+
+      # this will force to _collect to drop all the pending and future
+      # data, acquiring and releasing the can-write flag ignoring the 
+      # can-read one. Because of this, a call to _get_next will block
+      # forever
+      ctx['drop'] = True
+      can_write_flag.release()
+
    _collect.get_next = _get_next
+   _collect.destroy = _destroy
 
    return _collect
 
