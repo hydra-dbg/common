@@ -39,15 +39,15 @@ To run the server,
    ...   is_running = not to_be_running
    ...   while (is_running != to_be_running) and t < 10:
    ...     time.sleep(0.5); t += 0.5
-   ...     is_running = "running" in check_output(["python", "publish_subscribe/notifier.py", "status"])
+   ...     is_running = b"running" in check_output(["python", "-m", "publish_subscribe.notifier", "status"])
    ...   
    ...   return is_running == to_be_running
    
-   >>> os.system("python publish_subscribe/notifier.py stop")  # doctest: +PASS
+   >>> os.system("python -m publish_subscribe.notifier stop")  # doctest: +PASS
    >>> wait_for(to_be_running=False)
    True
 
-   >>> os.system("python publish_subscribe/notifier.py start")
+   >>> os.system("python -m publish_subscribe.notifier start")
    0
    >>> wait_for(to_be_running=True)
    True
@@ -58,7 +58,7 @@ To shutdown the system (only the server, this doesn't affect the clients),
 
 ::
 
-   >>> os.system("python publish_subscribe/notifier.py stop")
+   >>> os.system("python -m publish_subscribe.notifier stop")
    0
    >>> wait_for(to_be_running=False)
    True
@@ -68,7 +68,7 @@ The server should be able to use the same port again.
 
 ::
 
-   >>> os.system("python publish_subscribe/notifier.py start")
+   >>> os.system("python -m publish_subscribe.notifier start")
    0
    >>> wait_for(to_be_running=True)
    True
@@ -327,7 +327,7 @@ Each subscription has a identifier that you can use to cancel it latter.
    >>> time.sleep(0.2)
 
    >>> receive
-   u'A'
+   'A'
 
 
 One time Subscription
@@ -352,7 +352,7 @@ The *subscribe_for_once_call* is a shortcut for that:
 
    >>> time.sleep(0.2)
    >>> received
-   u'A'
+   'A'
 
 
 Synchronous call
@@ -370,7 +370,7 @@ Sometimes you need a synchronized way to wait a particular event. (don't abuse t
    >>> emit_event_in_background.start()
    >>> received = pubsub.wait('sync-event') # this will block us until 'emit_event_after_a_while' is called and we receive the data
    >>> received
-   u'SYNC'
+   'SYNC'
 
 Cleanup
 -------
@@ -381,7 +381,7 @@ Don't forget to close the connection and stop the server.
 
    >>> pubsub.close()
    >>>
-   >>> os.system("python publish_subscribe/notifier.py stop")
+   >>> os.system("python -m publish_subscribe.notifier stop")
    0
    >>> wait_for(to_be_running=False)
    True
@@ -409,7 +409,7 @@ we don't sent any message, so there is no way to duplicate or drop any message).
 
    >>> wait_for(to_be_running=False)
    True
-   >>> os.system("( sleep 2 && python publish_subscribe/notifier.py start ) &")
+   >>> os.system("( sleep 2 && python -m publish_subscribe.notifier start ) &")
    0
 
    >>> pubsub = publish_subscribe.eventHandler.EventHandler() # we block until the server is ready (or timeout)
@@ -417,7 +417,7 @@ we don't sent any message, so there is no way to duplicate or drop any message).
    True
    
    >>> pubsub.close()
-   >>> os.system("python publish_subscribe/notifier.py stop")
+   >>> os.system("python -m publish_subscribe.notifier stop")
    0
 
 Javascript's API
@@ -428,7 +428,7 @@ First we initialize the object
 
 ::
 
-   >>> os.system("( sleep 1 && python publish_subscribe/notifier.py start ) &")
+   >>> os.system("( sleep 1 && python -m publish_subscribe.notifier start ) &")
    0
 
 ::
@@ -550,7 +550,7 @@ Finally, we close and release any resource
 
    js> pubsub.close();
    
-   >>> os.system("python publish_subscribe/notifier.py stop")
+   >>> os.system("python -m publish_subscribe.notifier stop")
    0
    >>> wait_for(to_be_running=False)
    True
