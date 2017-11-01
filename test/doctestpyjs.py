@@ -146,6 +146,7 @@ class DocTestMixedParser(doctest.DocTestParser):
          self.skip_javascript_tests = False
       except JavascriptSessionError as e:
          self.skip_javascript_tests = True
+         ex = e
 
       globs = globs.copy()
       globs["_js_test"] = self.javascript_remote_session.test
@@ -154,7 +155,7 @@ class DocTestMixedParser(doctest.DocTestParser):
                        name, filename, lineno, string)     
 
       if self.skip_javascript_tests and self.has_javascript_tests:
-         print("[Warning] The javascript tests will BE SKIPPED! because the connection failed:\n %s" % str(e))
+         print("[Warning] The javascript tests will BE SKIPPED! because the connection failed:\n %s" % str(ex))
 
       return _doctest
 
