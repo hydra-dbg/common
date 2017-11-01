@@ -125,10 +125,10 @@ def poll_process(proc, tries, poll_time):
 
 @contextlib.contextmanager
 def noexception():
-    ''' Silent any possible exception. This is useful only in 
-        situations that you cannot do anything like when you are
-        finalizing a process and you want to close everything.
-        '''
+   ''' Silent any possible exception. This is useful only in 
+       situations that you cannot do anything like when you are
+       finalizing a process and you want to close everything.
+       '''
    try:
       yield
    except:
