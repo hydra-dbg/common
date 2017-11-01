@@ -1,6 +1,5 @@
 import doctest, re, sys, subprocess, time, socket, traceback
 GLOBAL_FLAGS = 0
-LOG_TEST = False
 PASS = doctest.register_optionflag("PASS")
 
 old_OutputChecker_check_output = doctest.OutputChecker.check_output
@@ -210,21 +209,22 @@ except ImportError:
 
 original_compile_func = builtins.compile
 
-def compile(source, filename, mode, flags=0, dont_inherit=0, **kargs):
+def compile(source, filename, *args, **kargs):
    '''Take the source and compile it into a runnable python code.
       Each source is looked up in the global mixed parser table
       to know of what type the source is it.
       If it is python, just  execute the 'compile' built-in function.
       If it is javascript, invoke the _js_test function to send the
       source to the remote javascript session so it is evaluated there.'''
-   global LOG_TEST
+   # this custom compile function will apply to the particular doctest
+   # any other file will not work
+   if not filename.startswith("<doctest "):
+       return original_compile_func(source, filename, *args, **kargs)
+
    _, source_type = mixed_parser.type_of_source[source].pop()
 
    import sys, pprint   # hook the displayhook to use pprint instead of repr
-   if LOG_TEST:
-       sys.stderr.write(source.strip() + " [running]\n" )
-   else:
-       sys.stderr.write(".")
+   sys.stderr.write(".")
 
    sys.stderr.flush()
    sys.displayhook = lambda x: pprint.pprint(x) if x is not None else None
@@ -241,7 +241,7 @@ def compile(source, filename, mode, flags=0, dont_inherit=0, **kargs):
    else:
       raise Exception("Unknown source's type: %s" % source_type)
 
-   return original_compile_func(source, filename, mode, flags, dont_inherit, **kargs)
+   return original_compile_func(source, filename, *args, **kargs)
 
 builtins.compile = compile    # patching!
 
@@ -273,9 +273,6 @@ if __name__ == "__main__":
         if "d" in sys.argv[1]:
           GLOBAL_FLAGS |= doctest.REPORT_NDIFF
           sys.argv[1] = sys.argv[1].replace('d', '')
-        if "L" in sys.argv[1]:
-          LOG_TEST = True
-          sys.argv[1] = sys.argv[1].replace('L', '')
 
     if sys.argv[1] == "-":
         del sys.argv[1]
