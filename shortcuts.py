@@ -110,8 +110,16 @@ def collect(func_collector):
       ctx['data'] = c
       can_read_flag.release()
 
-   def _get_next():
-      can_read_flag.acquire()
+   def _get_next(timeout=5, poll_time=0.1):
+      can_read_acquired = can_read_flag.acquire(False)
+      while not can_read_acquired and timeout > 0:
+          time.sleep(poll_time)
+          timeout -= poll_time
+          can_read_acquired = can_read_flag.acquire(False)
+
+      if not can_read_acquired:
+          raise Exception("'get_next' data timed out.")
+
       c = ctx['data']
       can_write_flag.release()
       return c
