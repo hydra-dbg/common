@@ -7,3 +7,6 @@ all:
 test:
 	python test/run.py `find regress/ -name '*.rst'`
 
+clean:
+	find . -name __pycache__ -exec rm -R {} \; || true
+	find . -name "*.pyc" -exec rm -R {} \;
