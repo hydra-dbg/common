@@ -61,12 +61,13 @@ class JavascriptSession(object):
          try:
             self.remote_console.connect(self.address)
             connected = True
-         except socket.error, e:
+         except socket.error as e:
             retries = retries - 1
             time.sleep(0.1)
-         
+            ex = e
+
       if not connected:
-         raise JavascriptSessionError(str(e))
+         raise JavascriptSessionError(str(ex))
 
       self.remote_console.settimeout(60*5)
       try:
@@ -74,7 +75,7 @@ class JavascriptSession(object):
          self.test(None, discard_response=True)
 
          return
-      except socket.error, e:
+      except socket.error as e:
          raise JavascriptSessionError(str(e))
 
    def close_connection(self):
@@ -124,7 +125,7 @@ class JavascriptSession(object):
                return None
 
             buf += next_chunk
-      except socket.error, e:
+      except socket.error as e:
          raise JavascriptSessionError("Original traceback:\n%s\n%s" % (traceback.format_exc(), str(e)))
 
 
@@ -144,7 +145,7 @@ class DocTestMixedParser(doctest.DocTestParser):
       try:
          self.javascript_remote_session.connect()
          self.skip_javascript_tests = False
-      except JavascriptSessionError, e:
+      except JavascriptSessionError as e:
          self.skip_javascript_tests = True
 
       globs = globs.copy()
@@ -154,7 +155,7 @@ class DocTestMixedParser(doctest.DocTestParser):
                        name, filename, lineno, string)     
 
       if self.skip_javascript_tests and self.has_javascript_tests:
-         print "[Warning] The javascript tests will BE SKIPPED! because the connection failed:\n %s" % str(e)
+         print("[Warning] The javascript tests will BE SKIPPED! because the connection failed:\n %s" % str(e))
 
       return _doctest
 
@@ -185,9 +186,9 @@ class DocTestMixedParser(doctest.DocTestParser):
       # sort the examples and its types in the same order that were found in the file
       # the types are then reversed so they can be 'pop-ed' in the same order that
       # its example is executed.
-      all_examples.sort(lambda this, other: cmp(this.lineno, other.lineno))
+      all_examples.sort(key=lambda this: this.lineno)
       for source in self.type_of_source.keys():
-         self.type_of_source[source].sort(lambda this, other: cmp(this[0], other[0]))
+         self.type_of_source[source].sort(key=lambda this: this[0])
          self.type_of_source[source].reverse()
 
       return all_examples
@@ -203,10 +204,14 @@ mixed_parser = DocTestMixedParser()
 # 'compile' function to compile the source code (because he assume that it is python 
 # code), this is the only way to change that behaviour so he can support python
 # and javascript code.
-import __builtin__
-original_compile_func = __builtin__.compile
+try:
+    import __builtin__ as builtins
+except ImportError:
+    import builtins
 
-def compile(source, filename, mode, flags=0, dont_inherit=0):
+original_compile_func = builtins.compile
+
+def compile(source, filename, mode, flags=0, dont_inherit=0, **kargs):
    '''Take the source and compile it into a runnable python code.
       Each source is looked up in the global mixed parser table
       to know of what type the source is it.
@@ -237,9 +242,9 @@ def compile(source, filename, mode, flags=0, dont_inherit=0):
    else:
       raise Exception("Unknown source's type: %s" % source_type)
 
-   return original_compile_func(source, filename, mode, flags, dont_inherit)
+   return original_compile_func(source, filename, mode, flags, dont_inherit, **kargs)
 
-__builtin__.compile = compile    # patching!
+builtins.compile = compile    # patching!
 
 
 # This is to override the default argument 'parser' so we can use DocTestMixedParser
@@ -270,8 +275,13 @@ if __name__ == "__main__":
     if sys.argv[1].startswith("-"):
         if "d" in sys.argv[1]:
           GLOBAL_FLAGS |= doctest.REPORT_NDIFF
+          sys.argv[1] = sys.argv[1].replace('d', '')
         if "L" in sys.argv[1]:
           LOG_TEST = True
+          sys.argv[1] = sys.argv[1].replace('L', '')
+
+    if sys.argv[1] == "-":
+        del sys.argv[1]
 
     sys.exit(doctest._test())
 
