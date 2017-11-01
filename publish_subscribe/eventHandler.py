@@ -10,9 +10,8 @@ from .esc import esc
 import random
 
 class Publisher(object):
-    def __init__(self, name="(publisher-only)"):
+    def __init__(self, name="(publisher-only)", address=("localhost", 5555)):
         self.name = name
-        address = self._get_address()
 
         try:
           self.connection = Connection(address, whoiam=name)
@@ -37,28 +36,6 @@ class Publisher(object):
     def close(self, *args, **kargs):
        self.connection.close()
     
-    def _get_address(self):
-        import os, ConfigParser
-        script_home = os.path.abspath(os.path.dirname(__file__))
-        parent = os.path.pardir
-
-        # TODO This shouldn't be hardcoded!
-        config_file = os.path.join(script_home, parent, parent, parent, "config", "publish_subscribe.cfg")
-
-        config = ConfigParser.SafeConfigParser(defaults={
-                    'wait_on_address': "localhost",
-                    'wait_on_port': "5555",
-                     })
-
-        config.read([config_file])
-        if not config.has_section("notifier"):
-           config.add_section("notifier")
-
-
-        address = (config.get("notifier", 'wait_on_address'), config.getint("notifier", 'wait_on_port'))
-
-        return address
-
     def __repr__(self):
         return "Endpoint (%s)" % self.name
 
@@ -72,12 +49,12 @@ class Publisher(object):
 
 class EventHandler(threading.Thread, Publisher):
     
-    def __init__(self, as_daemon=False, name="(bob-py)"):
+    def __init__(self, as_daemon=False, name="(bob-py)", address=("localhost", 5555)):
         threading.Thread.__init__(self)
         if as_daemon:
            self.daemon = True
 
-        Publisher.__init__(self, name=name)
+        Publisher.__init__(self, name=name, address=address)
 
         self.lock = Lock()
         self.callbacks_by_topic = {}
