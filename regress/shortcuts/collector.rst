@@ -49,7 +49,7 @@ thread with the ``get_next`` method
 
    >>> EH.publish('some-topic', {'is_important?': True, 'msg': 'awesome'})
    >>> collector.get_next()
-   u'awesome'
+   'awesome'
 
 Data discarded by the callback will not be captured nor returned by ``get_next``
 
@@ -60,10 +60,10 @@ Data discarded by the callback will not be captured nor returned by ``get_next``
    >>> EH.publish('some-topic', {'is_important?': True,  'msg': 'good'})
 
    >>> collector.get_next()
-   u'cool'
+   'cool'
 
    >>> collector.get_next()
-   u'good'
+   'good'
 
 The ``get_next`` method will block until the data is collected by our ``collector``
 function.
