@@ -10,7 +10,7 @@ def doctests(source_dir, whitelist):
 
 def run_doctests(sources, flags):
    for source in sources:
-      print "Run tests in %s" % source
+      print("Run tests in %s" % source)
       cmd = ("python %s %s %s" % (
          DOCTEST_PATH,
          flags,
