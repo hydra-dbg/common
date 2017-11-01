@@ -250,19 +250,17 @@ builtins.compile = compile    # patching!
 # This is to override the default argument 'parser' so we can use DocTestMixedParser
 # here, instead of the default DocTestParser.
 original_testfile_func = doctest.testfile
-def testfile(filename, module_relative=True, name=None, package=None,
-             globs=None, verbose=None, report=True, optionflags=0,
-             extraglobs=None, raise_on_error=False, parser=mixed_parser,
-             encoding=None):
+def testfile(*args, **kargs):
 
    global GLOBAL_FLAGS
-   optionflags = optionflags | GLOBAL_FLAGS
+   optionflags = kargs.get('optionflags', 0) | GLOBAL_FLAGS
+
+   kargs['optionflags'] = optionflags
+   kargs['parser'] = mixed_parser
 
    import sys
    try:
-      return original_testfile_func(filename, module_relative, name, package,
-            globs, verbose, report, optionflags, extraglobs, raise_on_error, parser,
-            encoding)
+      return original_testfile_func(*args, **kargs)
    finally:
       sys.stderr.write("\n")
       sys.stderr.flush()
