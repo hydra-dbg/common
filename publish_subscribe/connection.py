@@ -10,11 +10,11 @@ from message import unpack_message_header
 
 class ConnectionClosed(Exception):
     def __init__(self, msg=""):
-        Exception.__init__(self, "The connection was closed between messages (no message was sent/recieved partially). " + msg)
+        Exception.__init__(self, "The connection was closed between messages (no message was sent/received partially). " + msg)
 
 class PartialMessageDueConnectionClose(Exception):
     def __init__(self, msg=""):
-        Exception.__init__(self, "The message was sent/recieved partially due an unexpected connection close. " + msg)
+        Exception.__init__(self, "The message was sent/received partially due an unexpected connection close. " + msg)
 
 class Connection(object):
    def __init__(self, address_or_already_open_socket, whoiam="(?)"):
@@ -96,22 +96,15 @@ class Connection(object):
     
    def _read_next_message_header(self):
       #syslog.syslog(syslog.LOG_DEBUG, "Waiting for the next message header")
-      to_receive = 3
-      chunks = []
-      chunk = "dummy"
-      while to_receive > 0 and chunk:
-          chunk = self.socket.recv(to_receive)
-          chunks.append(chunk)
-          to_receive -= len(chunk)
+      header_len = 3
+      header = self._recv_all(header_len)
 
-      header = "".join(chunks)
-
-      if to_receive > 0:
+      if len(header) < header_len:
           self.end_of_the_communication = True
-          if to_receive == 3:
+          if not header:
               raise ConnectionClosed()
           else:
-              raise PartialMessageDueConnectionClose("Recieved %i bytes of the header" % (3-to_receive))
+              raise PartialMessageDueConnectionClose("Received %i bytes of the header" % (header_len-len(header)))
 
       return header
 
@@ -119,21 +112,28 @@ class Connection(object):
       message_type, message_body_len = unpack_message_header(header)
       #syslog.syslog(syslog.LOG_DEBUG, "Received '%s' with %i bytes to be read. Reading..." % esc(message_type, message_body_len))
 
-      to_receive = message_body_len
+      message_body = self._recv_all(message_body_len)
+
+      if len(message_body) < message_body_len:
+          self.end_of_the_communication = True
+          raise PartialMessageDueConnectionClose("Received %i bytes of the message body" % (message_body_len-len(message_body)))
+
+      return message_type, message_body
+
+   
+   def _recv_all(self, to_receive):
       chunks = []
-      chunk = "dummy"
-      while to_receive > 0 and chunk:
+      assert to_receive >= 0
+
+      while to_receive > 0:
           chunk = self.socket.recv(to_receive)
+          if not chunk:
+              break
+
           chunks.append(chunk)
           to_receive -= len(chunk)
       
-      message_body = "".join(chunks)
-
-      if to_receive > 0:
-          self.end_of_the_communication = True
-          raise PartialMessageDueConnectionClose("Recieved %i bytes of the message body" % (message_body_len-to_receive))
-
-      return message_type, message_body
+      return "".join(chunks)
 
 
    def __del__(self):
