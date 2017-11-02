@@ -1,4 +1,4 @@
-import socket, threading, json
+import socket, threading, json, sys
 import syslog, traceback, signal
 
 from .daemon import Daemon
