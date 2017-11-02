@@ -6,23 +6,24 @@ import syslog, traceback
 from .connection import Connection, ConnectionClosed
 from .message import pack_message, unpack_message_body
 from .topic import build_topic_chain, fail_if_topic_isnt_valid
-from .esc import esc, to_bytes
+from .esc import esc, to_bytes, to_text
 import random
 
 class Publisher(object):
     def __init__(self, name="(publisher-only)", address=("localhost", 5555)):
-        name = to_bytes(name)
-        self.name = name
+        self.name = to_text(name) # for threading.Thread compatibility
+        self.bin_name = to_bytes(name)
+
         self.said_goodbye = False
 
         try:
-          self.connection = Connection(address, whoiam=name)
-          self._log(syslog.LOG_DEBUG, "Stablished a connection with the notifier server (%s)." % esc(str(address)))
+          self.connection = Connection(address, whoiam=self.name)
+          self._log(syslog.LOG_DEBUG, "Established a connection with the notifier server (%s)." % esc(str(address)))
         except:
           self._log(syslog.LOG_ERR, "Error when creating a connection with the notifier server (%s): %s." % esc(str(address), traceback.format_exc()))
           raise 
 
-        self.connection.send_object(pack_message(message_type='introduce_myself', name=name))
+        self.connection.send_object(pack_message(message_type='introduce_myself', name=self.bin_name))
         self._safe_topics = set()
         
     def publish(self, topic, data):
@@ -37,15 +38,16 @@ class Publisher(object):
 
 
     def close(self, *args, **kargs):
+       assert isinstance(self.bin_name, bytes)
        if not self.connection.closed:
-          self.connection.send_object(pack_message(message_type='goodbye', name=self.name))
+          self.connection.send_object(pack_message(message_type='goodbye', name=self.bin_name))
           self.said_goodbye = True
        self.connection.close()
     
     def __repr__(self):
         return "Endpoint (%s)" % self.name
 
-    def _log(self, level, message): #TODO remove the "%" stuff over an unknow string (not local string)
+    def _log(self, level, message): #TODO remove the "%" stuff over an unknown string (not local string)
         header = "%s: " % esc(repr(self))
         message = header + message
 
@@ -195,7 +197,7 @@ class EventHandler(threading.Thread, Publisher):
        try:
           subscription['id'] = self.subscribe(topic, wrapper, **kargs)
        finally:
-          allow_unsubscription() #TODO very weak implementation: what happen if the callback is registered but an error happen and its subscriptio id is lost? How we can unsubscribe it?
+          allow_unsubscription() #TODO very weak implementation: what happen if the callback is registered but an error happen and its subscription id is lost? How we can unsubscribe it?
 
        return subscription['id'] if return_subscription_id else None
 
