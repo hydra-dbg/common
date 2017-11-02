@@ -1,5 +1,5 @@
 import socket, threading, json
-import syslog, traceback
+import syslog, traceback, signal
 
 from .daemon import Daemon
 from .connection import Connection, ConnectionClosed
@@ -119,9 +119,16 @@ class Notifier(Daemon):
       self.socket = None
       self._safe_topics = set()
 
+      self._shutting_down_gracefully = False
+
+   def mark_shutdown_gracefully(self, *args, **kargs):
+      self._shutting_down_gracefully = True
+
    def run(self):
       import gc
       gc.disable()
+
+      signal.signal(signal.SIGTERM, self.mark_shutdown_gracefully)
 
       syslog.syslog(syslog.LOG_NOTICE, "Starting 'publish_subscribe_notifier' daemon on %s." % esc(str(self.address)))
       self.init()
@@ -151,17 +158,21 @@ class Notifier(Daemon):
             socket, address = self.socket.accept()
             codename = "Endpoint to %s:%s" % (str(address[0]), str(address[1]))
             syslog.syslog(syslog.LOG_NOTICE, "New endpoint connected: %s." % esc(str(address)))
-         except: # TODO separate the real unexpected exceptions from the "shutdown" exception
-            syslog.syslog(syslog.LOG_ERR, "Exception in the wait for new endpoints of the notifier: %s" % esc((traceback.format_exc())))
+         except:
+            if self._shutting_down_gracefully:
+                syslog.syslog(syslog.LOG_NOTICE, "Shutting down 'publish_subscribe_notifier' daemon on %s." % esc(str(self.address)))
+            else:
+                syslog.syslog(syslog.LOG_ERR, "Exception in the wait for new endpoints of the notifier: %s" % esc((traceback.format_exc())))
+            self.reap(log_error_if_alive=True)
             break
 
          self.endpoints.append(_Endpoint(socket, self, codename))
-         self.reap()
+         self.reap(log_error_if_alive=False)
 
          if self.show_stats:
             self.show_endpoints_and_subscriptions()
 
-   def reap(self):
+   def reap(self, log_error_if_alive):
       to_close = filter(lambda endpoint: endpoint.is_finished, self.endpoints)
       syslog.syslog(syslog.LOG_DEBUG, "Collecting dead endpoints: %i endpoints to be collected." % esc(len(to_close)))
       for endpoint in to_close:
@@ -169,7 +180,8 @@ class Notifier(Daemon):
          endpoint.join()
 
       self.endpoints = filter(lambda endpoint: not endpoint.is_finished, self.endpoints)
-      syslog.syslog(syslog.LOG_DEBUG, "Still alive %i endpoints." % esc(len(self.endpoints)))
+      log_type = syslog.LOG_ERR if (log_error_if_alive and self.endpoints) else syslog.LOG_DEBUG
+      syslog.syslog(log_type, "Still alive %i endpoints." % esc(len(self.endpoints)))
 
 
    def get_and_update_endpoints_by_topic(self, topic):
