@@ -2,7 +2,7 @@ import socket, threading, json
 import syslog, traceback
 
 from .daemon import Daemon
-from .connection import Connection
+from .connection import Connection, ConnectionClosed
 from .topic import build_topic_chain, fail_if_topic_isnt_valid
 
 from .esc import esc
@@ -17,6 +17,8 @@ class _Endpoint(threading.Thread):
       self.notifier = notifier
       self.codename = codename
 
+      self.said_goodbye = False
+
       self.name = ""
 
       self.start()
@@ -25,11 +27,13 @@ class _Endpoint(threading.Thread):
       if not message_type in ("subscribe", "publish", "unsubscribe", "introduce_myself"):
          return False
 
-
       return True
 
-
    def _process_message(self, message_type, message_body):
+         if self.said_goodbye:
+            self._log(syslog.LOG_ERR, "Unexpected message after endpoint said goodbye. Message type: '%s'." % esc(message_type))
+            raise Exception("Unexpected message.")
+
          if message_type == "publish":
             topic, raw_obj = unpack_message_body(message_type, message_body, dont_unpack_object=True)
             self.notifier.distribute_event(topic, raw_obj)
@@ -45,6 +49,11 @@ class _Endpoint(threading.Thread):
          elif message_type == "subscribe":
             topic = unpack_message_body(message_type, message_body)
             self.notifier.register_subscriber(topic, self)
+         
+         elif message_type == "goodbye":
+            name = unpack_message_body(message_type, message_body)
+            self._log(syslog.LOG_NOTICE, "'%s' said goodbye as '%s'." % esc(self.name, name))
+            self.said_goodbye = True
 
          else:
             self._log(syslog.LOG_ERR, "Invalid message. Unknown type: '%s'." % esc(message_type))
@@ -57,8 +66,12 @@ class _Endpoint(threading.Thread):
             self._process_message(message_type, message_body)
 
          self._log(syslog.LOG_NOTICE, "The connection was closed by the other point of the connection.")
-      except:
-         self._log(syslog.LOG_ERR, "An exception has occurred when receiving/processing the messages: %s." % esc(traceback.format_exc()))
+      except Exception as ex:
+         if isinstance(ex, ConnectionClosed) and self.said_goodbye:
+            self._log(syslog.LOG_NOTICE, "The connection was closed by the other point of the connection.")
+            pass # okay, the endpoint said goodbye and then closed the connection
+         else:
+            self._log(syslog.LOG_ERR, "An exception has occurred when receiving/processing the messages: %s." % esc(traceback.format_exc()))
       finally:
          self.is_finished = True
 

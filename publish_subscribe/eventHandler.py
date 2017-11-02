@@ -3,7 +3,7 @@ import threading
 import socket
 from threading import Lock
 import syslog, traceback
-from .connection import Connection
+from .connection import Connection, ConnectionClosed
 from .message import pack_message, unpack_message_body
 from .topic import build_topic_chain, fail_if_topic_isnt_valid
 from .esc import esc, to_bytes
@@ -13,6 +13,7 @@ class Publisher(object):
     def __init__(self, name="(publisher-only)", address=("localhost", 5555)):
         name = to_bytes(name)
         self.name = name
+        self.said_goodbye = False
 
         try:
           self.connection = Connection(address, whoiam=name)
@@ -36,6 +37,9 @@ class Publisher(object):
 
 
     def close(self, *args, **kargs):
+       if not self.connection.closed:
+          self.connection.send_object(pack_message(message_type='goodbye', name=self.name))
+          self.said_goodbye = True
        self.connection.close()
     
     def __repr__(self):
@@ -206,9 +210,14 @@ class EventHandler(threading.Thread, Publisher):
 
                topic, obj = unpack_message_body(message_type, message_body, dont_unpack_object=False)
                self.dispatch(topic, obj)
-                   
-        except:
-           self._log(syslog.LOG_ERR, "Exception when receiving a message: %s." % esc(traceback.format_exc()))
+
+
+        except Exception as ex:
+           if isinstance(ex, ConnectionClosed) and self.said_goodbye:
+              self._log(syslog.LOG_NOTICE, "The connection was closed, it's ok, we said goodbye.")
+              pass # okay, we said goodbye
+           else:
+              self._log(syslog.LOG_ERR, "Exception when receiving a message: %s." % esc(traceback.format_exc()))
         finally:
            self.connection.close()
 
@@ -237,6 +246,6 @@ class EventHandler(threading.Thread, Publisher):
       
 
     def close(self, *args, **kargs):
-       self.connection.close()
+       Publisher.close(self)
        self.join(*args,  **kargs)
 

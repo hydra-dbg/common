@@ -9,7 +9,7 @@ from .esc import to_bytes, to_text
 ByteMax  =  (2**8)-1
 ShortMax = (2**16)-1
 
-def pack_introduce_myself_msg(name):
+def pack_introduce_myself_or_goodbye_msg(name):
     assert isinstance(name, bytes)
     name_length = len(name)
     
@@ -19,7 +19,7 @@ def pack_introduce_myself_msg(name):
     raw = name
     return raw
 
-def unpack_introduce_myself_msg(raw):
+def unpack_introduce_myself_or_goodbye_msg(raw):
     return raw  # the name
 
 
@@ -81,11 +81,15 @@ def pack_message(message_type, *args, **kargs):
     
     elif message_type == 'introduce_myself':
         op  = 0x3
-        message_body = pack_introduce_myself_msg(*args, **kargs)
+        message_body = pack_introduce_myself_or_goodbye_msg(*args, **kargs)
     
     elif message_type == 'unsubscribe':
         op = 0x4
         message_body = pack_subscribe_unsubscribe_msg(*args, **kargs)
+    
+    elif message_type == 'goodbye':
+        op  = 0x5
+        message_body = pack_introduce_myself_or_goodbye_msg(*args, **kargs)
 
     else:
         raise Exception()
@@ -109,6 +113,7 @@ def unpack_message_header(raw):
             0x2: "subscribe",
             0x3: "introduce_myself",
             0x4: "unsubscribe",
+            0x5: "goodbye",
             }[op]
 
     return message_type, message_body_len
@@ -122,10 +127,13 @@ def unpack_message_body(message_type, message_body, **kargs):
         return unpack_subscribe_unsubscribe_msg(message_body, **kargs)
     
     elif message_type == 'introduce_myself':
-        return unpack_introduce_myself_msg(message_body, **kargs)
+        return unpack_introduce_myself_or_goodbye_msg(message_body, **kargs)
 
     elif message_type == "unsubscribe":
         return unpack_subscribe_unsubscribe_msg(message_body, **kargs)
+    
+    elif message_type == 'goodbye':
+        return unpack_introduce_myself_or_goodbye_msg(message_body, **kargs)
 
     else:
         raise Exception()

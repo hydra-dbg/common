@@ -17,6 +17,8 @@ define(function () {
          var name = "(alice-js)";
       }
 
+      this.name = name;
+
       if(this.socket) {
          this.shutdown();
       }
@@ -56,6 +58,8 @@ define(function () {
       if(!this.socket) {
          return;
       }
+
+      this.socket.write(JSON.stringify({type: 'goodbye', name: this.name}));
 
       this.socket.end();
       this.socket = null;
