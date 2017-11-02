@@ -320,7 +320,7 @@ def _test():
     if args.fail_fast:
         options |= FAIL_FAST
     if args.ndiff:
-        doctest |= REPORT_NDIFF
+        options |= REPORT_NDIFF
 
     # handle whitelist/blacklist
     blacklist = set(args.skip)
