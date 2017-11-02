@@ -11,7 +11,7 @@ This is an example of an interactive Python session:
 
 ::
 
-   >>> print "Hello world!"
+   >>> print("Hello world!")
    Hello world!
 
 For Javascript:
@@ -95,7 +95,7 @@ very elegant (or very documentative)
 :: 
 
    >>> def side_effect():
-   ...   print "effect"
+   ...   print("effect")
    >>> side_effect()
    effect
 
@@ -116,14 +116,14 @@ used to check each tests. These same flags can be used for both, Python and Java
 
 ::
 
-   >>> print range(20)     # doctest: +NORMALIZE_WHITESPACE
+   >>> print(list(range(20)))     # doctest: +NORMALIZE_WHITESPACE
    [0,   1,  2,  3,  4,  5,  6,  7,  8,  9,
    10,  11, 12, 13, 14, 15, 16, 17, 18, 19]
 
-   >>> print range(20)      # doctest: +ELLIPSIS
+   >>> print(list(range(20)))      # doctest: +ELLIPSIS
    [0, 1, ..., 18, 19]
 
-   >>> print "hello\n\nworld"
+   >>> print("hello\n\nworld")
    hello
    <BLANKLINE>
    world
