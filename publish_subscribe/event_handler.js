@@ -1,12 +1,16 @@
-define(function () {
+define(['message'], function (message) {
    'use strict';
+
+   var pack_message = message.pack_message;
+   var unpack_message_header = message.unpack_message_header;
+   var unpack_message_body = message.unpack_message_body;
 
    // TODO extract the constants an put them in a external file
    // TODO wrap the errors into Error objects
    function EventHandler() {
       this.callbacks_by_topic = {};
       this.max_buf_length = 1024 * 1024;
-      this.log_to_console = true;
+      this.log_to_console = false;
 
       this.subscriptions_by_id = {};
       this.next_valid_subscription_id = 0;
@@ -23,7 +27,10 @@ define(function () {
          this.shutdown();
       }
 
-      this.socket = require('net').Socket();
+      var net = require('net');
+      this.socket = new net.Socket();
+      this.socket.setEncoding(null); // binary data (Buffer)
+      delete this.socket._readableState.decoder;
       
       var is_connected = false;
       var attempts = 0;
@@ -46,11 +53,10 @@ define(function () {
 
       this.socket.on('connect', function () {
          is_connected = true;
-         that.socket.write(JSON.stringify({type: 'introduce_myself', name: name}));
+         that.socket.write(pack_message('introduce_myself', {name: name}));
          that.init_dispacher();
       });
 
-      this.socket.setEncoding('ascii');
       this.socket.connect(5555, '');
    };
 
@@ -59,7 +65,7 @@ define(function () {
          return;
       }
 
-      this.socket.write(JSON.stringify({type: 'goodbye', name: this.name}));
+      this.socket.write(pack_message('goodbye', {name: name}));
 
       this.socket.end();
       this.socket = null;
@@ -74,7 +80,7 @@ define(function () {
          throw "The topic must not be empty";
       }
 
-      this.socket.write(JSON.stringify({type: 'publish', topic: topic, data: JSON.stringify(data)}));
+      this.socket.write(pack_message('publish', {topic: topic, obj: data}));
    };
 
    EventHandler.prototype.subscribe = function (topic, callback) {
@@ -82,7 +88,7 @@ define(function () {
       var callbacks = this.callbacks_by_topic[topic];
       if(!callbacks) {
          this.callbacks_by_topic[topic] = [callback];
-         this.socket.write(JSON.stringify({type: 'subscribe', topic: topic}));
+         this.socket.write(pack_message('subscribe', {topic: topic}));
       }
       else {
          this.callbacks_by_topic[topic].push(callback);
@@ -121,7 +127,7 @@ define(function () {
       // remove the topic if there isn't any callback
       if (this.callbacks_by_topic[topic].length === 0) {
          delete this.callbacks_by_topic[topic];
-         this.socket.write(JSON.stringify({type: 'unsubscribe', topic: topic}));
+         this.socket.write(pack_message('unsubscribe', {topic: topic}));
       }
 
       // remove the subscription
@@ -150,63 +156,76 @@ define(function () {
 
 
    EventHandler.prototype.init_dispacher = function () {
-      var buf = '';
+      var previous_chunk = new Buffer("");
+      var is_waiting_the_header = true;
+
+      var message_type = null;
+      var message_body_len = null;
+
       var self = this;
+      var process_chunk = function (chunk, is_dummy_chunk) {
+         if (is_dummy_chunk !== true) {
+             previous_chunk = Buffer.concat([previous_chunk, chunk]);
+         }
+
+         if (is_waiting_the_header) {
+            if (previous_chunk.length >= 3) {
+                var header = previous_chunk.slice(0, 3);
+                previous_chunk = previous_chunk.slice(3);
+
+                var r = unpack_message_header(header);
+                message_type = r.message_type;
+                message_body_len = r.message_body_len;
+
+                is_waiting_the_header = false;
+                return true;
+            }
+            else {
+                return false;
+            }
+         } 
+         else { // parsing the body, only if we have enough bytes
+            if (previous_chunk.length >= message_body_len) {
+                var message_body = previous_chunk.slice(0, message_body_len);
+                previous_chunk = previous_chunk.slice(message_body_len);
+
+                if (message_type !== 'publish') {
+                    console.warn("Unexpected message of type '"+message_type+"' (expecting a 'publish' message). Dropping the message and moving on.");
+                    // continue, move on
+                }
+                else {
+                    var r = unpack_message_body(message_type, message_body);
+                    var topic = r.topic;
+                    var obj = r.obj;
+                    
+                    is_waiting_the_header = true;
+                    self.dispatch(topic, obj);
+                }
+                
+                message_type = null;
+                message_body_len = null;
+                return true;
+            }
+            else {
+                return false;
+            }
+         }
+
+         throw new Error(); 
+      };
+
       this.socket.on('data', function (chunk) {
-         var events = [];
-         var incremental_chunks = chunk.split('}');
-         var index_of_the_last = incremental_chunks.length-1;
-
-         // We join each sub-chunk in an incremental way.
-         // In each step we try to parse the full string to extract
-         // the event (an object).
-         for(var i = 0; i < incremental_chunks.length; i++) {
-            buf += incremental_chunks[i] + ((i === index_of_the_last)? '': '}');
-            if(!buf) {
-               continue;
-            }
-
-            if(buf.length > this.max_buf_length) {
-               throw "Too much data. Buffer's length exceeded .";
-            }
-
-            var event = null;
-            try {
-               event = JSON.parse(buf);
-            }
-            catch(e) {
-               //JSON fail, so the 'event object' is not complete yet
-            }
-
-            if(!event) {
-               continue;
-            } 
-
-            var old_buf = buf; //for logging
-            buf = '';
-
-            if(typeof event !== 'object') {
-               throw "Bogus 'event' payload. It isn't an object like {...} .";
-            }
-
-            if(typeof event.topic === 'undefined' || typeof event.data === 'undefined') {
-               throw "Bogus 'event' payload. It has an incorrect or missing property.";
-            }
-
-            events.push(event);
-         }
-
-         //finally we dispatch the events, if any
-         for(var i = 0; i < events.length; i++) {
-            self.dispatch(events[i]);
-         }
+        var success = process_chunk(chunk);
+        while (success) {
+            success = process_chunk("", true);
+        }
       });
    };
 
-   EventHandler.prototype.dispatch = function (event) {
+   EventHandler.prototype.dispatch = function (topic, data) {
       if(this.log_to_console) {
-         console.log("Dispatch: ");
-         console.log(event);
+         console.debug("Dispatch: ");
+         console.debug({topic: topic, data:data});
       }
 
       // we build the topic chain:
@@ -214,36 +233,51 @@ define(function () {
       // if the event's topic was A, the chain is ['', A]
       // if the event's topic was A.B, the chain is ['', A, B]
       // and so on
-      var subtopics = event.topic.split('.');
+      var subtopics = topic.split('.');
       var topic_chain = ['']; // the 'empty' topic is added
       for(var i = 0; i < subtopics.length; i++) {
          topic_chain.push( subtopics.slice(0, i+1).join('.') );
       }
       if(this.log_to_console) {
-         console.log("Topic chain:");
-         console.log(topic_chain);
+         console.debug("Topic chain:");
+         console.debug(topic_chain);
       }
    
       // we call the callbacks for each topic in the topic chain.
       // the chain is iterated in reverse order (the more specific topic first)
       for(var j = topic_chain.length-1; j >= 0; j--) {
-         var topic = topic_chain[j];
-         var callbacks = this.callbacks_by_topic[topic] || [];
+         var subtopic = topic_chain[j];
+         var callbacks = this.callbacks_by_topic[subtopic] || [];
          if(this.log_to_console) {
-            console.log(" on '" + topic + "': ");
-            console.log(callbacks);
+            console.debug(" on '" + subtopic + "': ");
+            console.debug(callbacks);
          }
          for(var i = 0; i < callbacks.length; i++) {
             try {
-               callbacks[i](JSON.parse(event.data));
+               callbacks[i](data, topic); // forward the full topic string, not the partial one
             }
             catch (e) {
-               // TODO
+               console.warn("Error in callback (subtopic: "+subtopic+"): " + e + "\n" + e.stack);
             }
          }
       }
    };
+   
+   EventHandler.prototype.toString = function(){
+	   return "EventHandler Instance";
+   }
 
-   return {EventHandler: EventHandler};
+   var GLOBAL_EVENT_HANDLER = null;
+
+   var set_global_event_handler = function (EH) {
+      GLOBAL_EVENT_HANDLER = EH;
+   };
+
+   var get_global_event_handler = function () {
+      return GLOBAL_EVENT_HANDLER;
+   };
+   return {EventHandler: EventHandler, 
+           set_global_event_handler: set_global_event_handler,
+           get_global_event_handler: get_global_event_handler};
 
 });

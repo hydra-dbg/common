@@ -4,7 +4,7 @@ define(function () {
     var ByteMax  = 0x000000ff;
     var ShortMax = 0x0000ffff;
 
-    function pack_introduce_myself_msg(params) {
+    function pack_introduce_myself_or_goodbye_msg(params) {
         var name = params.name;
         var name_length = name.length;
 
@@ -15,7 +15,7 @@ define(function () {
         return new Buffer(name);
     }
 
-    function unpack_introduce_myself_msg(raw_buf) {
+    function unpack_introduce_myself_or_goodbye_msg(raw_buf) {
         return b.toString();  // the name
     }
 
@@ -88,11 +88,15 @@ define(function () {
         }
         else if (message_type === 'introduce_myself') {
             var op  = 0x3;
-            var message_body = pack_introduce_myself_msg(params);
+            var message_body = pack_introduce_myself_or_goodbye_msg(params);
         }
         else if (message_type === 'unsubscribe') {
             var op = 0x4;
             var message_body = pack_subscribe_unsubscribe_msg(params);
+        }
+        else if (message_type === 'goodbye') {
+            var op  = 0x5;
+            var message_body = pack_introduce_myself_or_goodbye_msg(params);
         }
         else {
             throw new Error();
@@ -126,6 +130,7 @@ define(function () {
             0x2: "subscribe",
             0x3: "introduce_myself",
             0x4: "unsubscribe",
+            0x5: "goodbye",
             }[op];
 
         if (!message_type) {
@@ -144,10 +149,13 @@ define(function () {
             return unpack_subscribe_unsubscribe_msg(message_body);
         }
         else if (message_type === 'introduce_myself') {
-            return unpack_introduce_myself_msg(message_body);
+            return unpack_introduce_myself_or_goodbye_msg(message_body);
         }
         else if (message_type === "unsubscribe") {
             return unpack_subscribe_unsubscribe_msg(message_body);
+        }
+        else if (message_type === 'goodbye') {
+            return unpack_introduce_myself_or_goodbye_msg(message_body);
         }
         else {
             throw new Error();
