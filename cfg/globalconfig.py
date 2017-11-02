@@ -3,9 +3,11 @@ import sys, os
 
 __CONFIG = None
 
-def load_global_config(config_file=None, user_file=None):
+def load_global_config(config_file=None, user_file=None, ignore_if_loaded=False):
     global __CONFIG
     if __CONFIG is not None:
+        if ignore_if_loaded:
+            return
         raise ValueError("The global configuration is already loaded.")
    
    

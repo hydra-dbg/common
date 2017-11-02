@@ -8,7 +8,8 @@ Test our global standard configuration
 
     >>> import cfg.globalconfig as globalconfig
     >>> globalconfig.load_global_config("regress/cfg/config/global.cfg",
-    ...                                 "regress/cfg/config/user.cfg" )
+    ...                                 "regress/cfg/config/user.cfg",
+    ...                                  ignore_if_loaded = True )
     >>> config = globalconfig.get_global_config()
 
     >>> config.has_section("gdb")
