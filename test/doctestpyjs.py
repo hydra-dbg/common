@@ -1,4 +1,6 @@
 import doctest, re, sys, subprocess, time, socket, traceback, pprint
+import argparse
+
 GLOBAL_FLAGS = 0
 PASS = doctest.register_optionflag("PASS")
 
@@ -259,7 +261,7 @@ builtins.compile = compile    # patching!
 # This is to override the default argument 'parser' so we can use DocTestMixedParser
 # here, instead of the default DocTestParser.
 original_testfile_func = doctest.testfile
-def testfile(*args, **kargs):
+def testfile(filename, *args, **kargs):
 
    global GLOBAL_FLAGS
    optionflags = kargs.get('optionflags', 0) | GLOBAL_FLAGS
@@ -267,8 +269,9 @@ def testfile(*args, **kargs):
    kargs['optionflags'] = optionflags
    kargs['parser'] = mixed_parser
 
+   print(filename)
    try:
-      return original_testfile_func(*args, **kargs)
+      return original_testfile_func(filename, *args, **kargs)
    finally:
       sys.stderr.write("\n")
       sys.stderr.flush()
@@ -276,15 +279,32 @@ def testfile(*args, **kargs):
 
 doctest.testfile = testfile   # patching!
 
+def parse_cmdline():
+    global GLOBAL_FLAGS
+
+    parser = argparse.ArgumentParser(description='Run doctests')
+    parser.add_argument('-d', '--diff', action='store_true')
+    parser.add_argument('-v', action='store_true')
+    parser.add_argument('--skip', nargs='*', default=[])
+    parser.add_argument('tests', nargs='+')
+
+    args = parser.parse_args()
+
+    if args.diff:
+        GLOBAL_FLAGS |= doctest.REPORT_NDIFF
+
+    blacklist = set(args.skip)
+    whitelist = set(args.tests)
+    
+    tests = list((whitelist - blacklist))
+    tests.sort()
+
+    sys.argv[1:] = tests
+
+    if args.v:
+        sys.argv.insert(1, '-v') # used by the original doctests module
 
 if __name__ == "__main__":
-    if sys.argv[1].startswith("-"):
-        if "d" in sys.argv[1]:
-          GLOBAL_FLAGS |= doctest.REPORT_NDIFF
-          sys.argv[1] = sys.argv[1].replace('d', '')
-
-    if sys.argv[1] == "-":
-        del sys.argv[1]
-
+    parse_cmdline()
     sys.exit(doctest._test())
 

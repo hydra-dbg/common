@@ -5,7 +5,7 @@ all:
 	exit 1
 
 test:
-	python${python_version} test/run.py `find regress/ -name '*.rst'`
+	python${python_version} test/doctestpyjs.py `find regress/ -name '*.rst'`
 
 clean:
 	find . -name __pycache__ -exec rm -R {} \; || true
