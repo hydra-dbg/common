@@ -3,6 +3,7 @@
 import sys, os, time, atexit, resource, errno
 import signal
 from signal import SIGTERM, SIGHUP, SIGKILL
+from subprocess import check_output, CalledProcessError
 
 # Based in http://www.jejik.com/articles/2007/02/a_simple_unix_linux_daemon_in_python/
 
@@ -146,22 +147,37 @@ class Daemon(object):
 
       return pid
 
-   def start(self):
+   def is_alive(self):
       pid = self.get_pid_from_pidfile()
-      if pid:
-         message = "Pidfile %s already exist. %s daemon already running? (PID: %s)\nIf not, remove the pid file."
-         sys.stderr.write(message % (self.pidfile, self.name, pid))
+
+      try:
+          others = check_output(["pgrep", "-f", self.name]).split("\n")
+      except CalledProcessError:
+          others = []
+
+      others = [int(other_pid.strip()) for other_pid in others if other_pid.strip()]
+      return pid, pid in others
+
+   def start(self):
+      pid, is_alive = self.is_alive()
+      if is_alive:
+         message = "Pidfile %s already exist and process %s is running. %s daemon already running?\nIf not, remove the pid file."
+         sys.stderr.write(message % (self.pidfile, pid, self.name))
          sys.exit(1)
+      else:
+         # not alive, remove pidfile if for some reason exists
+         if os.path.exists(self.pidfile):
+            os.remove(self.pidfile)
 
       # Start the daemon
       self.be_a_daemon()
       self.run()
 
    def stop(self, is_a_restart=False):
-      pid = self.get_pid_from_pidfile()
-      if not pid and not is_a_restart:
-         message = "Pidfile %s does not exist. %s daemon not running?\n"
-         sys.stderr.write(message % (self.pidfile, self.name))
+      pid, is_alive = self.is_alive()
+      if not is_alive and not is_a_restart:
+         message = "Pidfile %s does not exist or process %s not found. %s daemon not running?\n"
+         sys.stderr.write(message % (self.pidfile, str(pid), self.name))
          sys.exit(1)
 
       # Try killing the daemon process	
@@ -183,8 +199,8 @@ class Daemon(object):
  
 
    def status(self):
-      pid = self.get_pid_from_pidfile()
-      if pid:
+      pid, is_alive = self.is_alive()
+      if is_alive:
          print("%s start/running, process %i" % (self.name, pid))
       else:
          print("%s stop/waiting" % self.name)
