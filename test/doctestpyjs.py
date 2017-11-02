@@ -279,32 +279,79 @@ def testfile(filename, *args, **kargs):
 
 doctest.testfile = testfile   # patching!
 
-def parse_cmdline():
-    global GLOBAL_FLAGS
+# blatanly stolen from python3.5/doctest.py
+# We needed to do this to 
+#  - add more arguments
+#  - to continue the testing even if a test fails
+def _test():
+    # add the flag too, this may not be in python 2.x
+    from doctest import (register_optionflag, OPTIONFLAGS_BY_NAME,
+                         REPORT_NDIFF)
+    FAIL_FAST = register_optionflag('FAIL_FAST')
 
-    parser = argparse.ArgumentParser(description='Run doctests')
-    parser.add_argument('-d', '--diff', action='store_true')
-    parser.add_argument('-v', action='store_true')
-    parser.add_argument('--skip', nargs='*', default=[])
-    parser.add_argument('tests', nargs='+')
-
+    parser = argparse.ArgumentParser(description="doctest runner")
+    parser.add_argument('-v', '--verbose', action='store_true', default=False,
+                        help='print very verbose output for all tests')
+    parser.add_argument('-n', '--ndiff', action='store_true', default=False,
+                        help=('report using the NDIFF algorithm (this'
+                              ' is a shorthand for -o REPORT_NDIFF, and is'
+                              ' in addition to any other -o options)'))
+    parser.add_argument('-o', '--option', action='append',
+                        choices=OPTIONFLAGS_BY_NAME.keys(), default=[],
+                        help=('specify a doctest option flag to apply'
+                              ' to the test run; may be specified more'
+                              ' than once to apply multiple options'))
+    parser.add_argument('-f', '--fail-fast', action='store_true',
+                        help=('stop running tests after first failure (this'
+                              ' is a shorthand for -o FAIL_FAST, and is'
+                              ' in addition to any other -o options)'))
+    parser.add_argument('--skip', nargs='*', default=[],
+                        help='remove from the list of tests (skip them)')
+    parser.add_argument('file', nargs='+',
+                        help='file containing the tests to run')
     args = parser.parse_args()
+    testfiles = args.file
+    # Verbose used to be handled by the "inspect argv" magic in DocTestRunner,
+    # but since we are using argparse we are passing it manually now.
+    verbose = args.verbose
+    options = 0
+    for option in args.option:
+        options |= OPTIONFLAGS_BY_NAME[option]
+    if args.fail_fast:
+        options |= FAIL_FAST
+    if args.ndiff:
+        doctest |= REPORT_NDIFF
 
-    if args.diff:
-        GLOBAL_FLAGS |= doctest.REPORT_NDIFF
-
+    # handle whitelist/blacklist
     blacklist = set(args.skip)
-    whitelist = set(args.tests)
+    whitelist = set(testfiles)
     
-    tests = list((whitelist - blacklist))
-    tests.sort()
+    testfiles = list((whitelist - blacklist))
+    testfiles.sort()
 
-    sys.argv[1:] = tests
+    whole_failed = 0
+    for filename in testfiles:
+        if filename.endswith(".py"):
+            # It is a module -- insert its dir into sys.path and try to
+            # import it. If it is part of a package, that possibly
+            # won't work because of package imports.
+            dirname, filename = os.path.split(filename)
+            sys.path.insert(0, dirname)
+            m = __import__(filename[:-3])
+            del sys.path[0]
+            failures, _ = testmod(m, verbose=verbose, optionflags=options)
+        else:
+            failures, _ = testfile(filename, module_relative=False,
+                                     verbose=verbose, optionflags=options)
+        if failures:
+            # do not abort the execution if a single test fails
+            # unless we are using the FAIL_FAST option
+            whole_failed = 1
+            if options & FAIL_FAST:
+                break
 
-    if args.v:
-        sys.argv.insert(1, '-v') # used by the original doctests module
+    return whole_failed
 
 if __name__ == "__main__":
-    parse_cmdline()
-    sys.exit(doctest._test())
+    sys.exit(_test())
 
