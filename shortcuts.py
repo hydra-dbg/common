@@ -1,11 +1,15 @@
 import os
 import contextlib
-import time 
+import time
+import sys
 from subprocess import check_output, check_call
-import publish_subscribe.eventHandler
 import random
 from threading import Lock
 
+if __package__:
+    from .publish_subscribe.eventHandler import EventHandler
+else:
+    from publish_subscribe.eventHandler import EventHandler
 
 def start_notifier(path):
    notifier_path = os.path.join(path, "notifier").replace(os.sep, '.')
@@ -55,7 +59,7 @@ def request(gdb, command, arguments=tuple(), return_none=False):
       ctx['response'] = event
       response_received_flag.release() # release the flag, response received!
       
-   pubsub = publish_subscribe.eventHandler.EventHandler(name="requester")
+   pubsub = EventHandler(name="requester")
    subscription_id = pubsub.subscribe(
                                  response_topic, 
                                  _wait_and_get_response_from_gdb, 
@@ -178,3 +182,10 @@ def noexception():
    except:
       pass
 
+
+def to_bytes(s, encoding='utf-8'):
+   return s if isinstance(s, bytes) else s.encode(encoding)
+
+def to_text(s, encoding='utf-8'):
+   text_t = str if sys.version_info.major > 2 else unicode
+   return s if isinstance(s, text_t) else text_t(s, encoding)
