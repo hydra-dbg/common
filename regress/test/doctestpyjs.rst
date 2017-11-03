@@ -194,3 +194,42 @@ Errors and exceptions can be checked too (in python is easy, but in javascript i
    ReferenceError: non_existent_var is not defined
    ...
 
+Bytes/Unicode marker
+--------------------
+
+Python 2.x uses ``u'`` and ``u"`` (and ``U'`` and ``U"``) to mark the begin of an
+unicode literal. Optionally one can use ``b'`` to mark the begin of a sequence of
+bytes (``str`` in Python 2.x)
+
+Unfortunately, in Python 3.x it is the ``u'`` marker optional and the ``b'`` marker
+mandatory.
+
+This duality forces to have two different sets of expected results or do not relay
+in the ``pprint`` functionality for testing at all.
+
+As a workaround we use a custom ``pretty printer`` to remove all the markers ``u'``
+and ``b'`` for simple and for nested objects retaining the original alignment.
+
+::
+
+   >>> u = u'foo'
+   >>> b = b'bar'
+
+   >>> u
+   'foo'
+
+   >>> b
+   'bar'
+
+   >>> du = {u'aaaaaaaa': {u'bbbbbbbbbb': u'asasaaaaaaaaaaaaaasasa', u'c': u'asaaaaaaaaaaaaaaaaaaaaa'}}
+   >>> db = {b'aaaaaaaa': {b'bbbbbbbbbb': b'asasaaaaaaaaaaaaaasasa', b'c': b'asaaaaaaaaaaaaaaaaaaaaa'}}
+
+   >>> du
+   {'aaaaaaaa': {'bbbbbbbbbb': 'asasaaaaaaaaaaaaaasasa',
+                 'c': 'asaaaaaaaaaaaaaaaaaaaaa'}}
+
+   >>> db
+   {'aaaaaaaa': {'bbbbbbbbbb': 'asasaaaaaaaaaaaaaasasa',
+                 'c': 'asaaaaaaaaaaaaaaaaaaaaa'}}
+
+

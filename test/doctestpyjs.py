@@ -211,14 +211,21 @@ except ImportError:
     import builtins
 
 original_compile_func = builtins.compile
-literal_string_re = re.compile(r"(\W|^)[uUbB]([rR]?[\'\"])", re.UNICODE)
 
-def display(s):
-    global literal_string_re
-    if s is not None:
-        _repr = pprint.pformat(s)
-        _repr = re.sub(literal_string_re, r'\1\2', _repr)
-        print(_repr)
+class Printer(pprint.PrettyPrinter):
+    def __init__(self, *args, **kargs):
+        pprint.PrettyPrinter.__init__(self, *args, **kargs)
+        self.ub_marker_re = re.compile(r"(\W|^)[uUbB]([rR]?[\'\"])", re.UNICODE)
+
+    def format(self, object, context, maxlevels, level):
+        parent_format = pprint.PrettyPrinter.format
+        orepr, readable, recursive = parent_format(self, object, context, 
+                                                  maxlevels, level)
+
+        repr = re.sub(self.ub_marker_re, r'\1\2', orepr)
+        readable = False if repr != orepr else readable
+
+        return repr, readable, recursive
 
 def compile(source, filename, *args, **kargs):
    '''Take the source and compile it into a runnable python code.
@@ -235,11 +242,12 @@ def compile(source, filename, *args, **kargs):
    _, source_type = mixed_parser.type_of_source[source].pop()
 
    sys.stderr.write(".")
-
    sys.stderr.flush()
    
    # hook the displayhook to use pprint instead of repr
-   sys.displayhook = display
+   sys.displayhook = lambda s: (
+                        None if s is None 
+                        else Printer(indent=1, width=80, depth=None).pprint(s))
 
    if source_type == "js":
       js_code = source
