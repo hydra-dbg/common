@@ -27,9 +27,9 @@ def esc(*args):
 
    return tuple(escaped)
 
-def to_bytes(s):
-   return s if isinstance(s, bytes) else bytes(s, 'utf-8')
+def to_bytes(s, encoding='utf-8'):
+   return s if isinstance(s, bytes) else s.encode(encoding)
 
-def to_text(s):
+def to_text(s, encoding='utf-8'):
    text_t = str if sys.version_info.major > 2 else unicode
-   return s if isinstance(s, text_t) else text_t(s, 'utf-8')
+   return s if isinstance(s, text_t) else text_t(s, encoding)
