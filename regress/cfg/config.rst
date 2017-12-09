@@ -24,3 +24,12 @@ Test our global standard configuration
     >>> config.get("gdb", "python")
     '2.x'
 
+    >>> config2 = config.extend({
+    ...                          'gdb':
+    ...                              {'use-gdb-system': True},
+    ...                         })
+
+    >>> config.getboolean("gdb", "use-gdb-system")
+    False
+    >>> config2.getboolean("gdb", "use-gdb-system")
+    True
